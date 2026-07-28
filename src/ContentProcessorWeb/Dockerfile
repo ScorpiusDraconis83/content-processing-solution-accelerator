@@ -33,7 +33,7 @@ ENV REACT_APP_WEB_CLIENT_ID=APP_WEB_CLIENT_ID \
 RUN pnpm build
 
 # Stage 2: Serve the application with NGINX
-FROM mcr.microsoft.com/azurelinux/base/nginx:1.25
+FROM mcr.microsoft.com/azurelinux/base/nginx:1.28.3-8-azl3.0.20260722
 
 # Copy the built files from the previous stage
 COPY --from=builder /app/build /usr/share/nginx/html
