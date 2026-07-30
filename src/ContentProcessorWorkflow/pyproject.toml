@@ -22,7 +22,7 @@ dependencies = [
     "fastmcp==3.2.3",
     "jinja2==3.1.6",
     "kafka-python==2.3.0",
-    "mcp==1.25.0",
+    "mcp==1.28.1",
     "openai==2.15.0",
     "psutil==7.2.1",
     "python-multipart==0.0.31",
@@ -34,7 +34,7 @@ dependencies = [
     "protobuf==6.33.6",
     "cryptography==48.0.1",
     "pyjwt==2.13.0",
-    "pyasn1==0.6.3",
+    "pyasn1==0.6.4",
     "pydantic-settings==2.14.2",
 ]
 
