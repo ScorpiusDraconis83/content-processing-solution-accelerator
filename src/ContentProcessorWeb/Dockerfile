@@ -1,5 +1,5 @@
 # Stage 1: Build the React application
-FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:22-bookworm AS builder
+FROM node:22.22.0-bookworm AS builder
 
 # Set working directory
 WORKDIR /app

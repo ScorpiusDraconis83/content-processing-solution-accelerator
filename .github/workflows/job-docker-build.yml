@@ -23,7 +23,7 @@ jobs:
       IMAGE_TAG: ${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Generate Unique Docker Image Tag
         id: generate_docker_tag
@@ -43,7 +43,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to Azure
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -93,7 +93,7 @@ jobs:
             ${{ vars.ACR_TEST_LOGIN_SERVER }}/contentprocessorweb:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
 
       - name: Build and Push ContentProcessorWorkflow Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
