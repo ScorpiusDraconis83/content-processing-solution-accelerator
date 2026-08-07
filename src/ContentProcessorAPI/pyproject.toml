@@ -26,7 +26,7 @@ dependencies = [
     "sas-cosmosdb==0.1.5",
     "azure-monitor-events-extension>=0.1.0",
     "azure-monitor-opentelemetry==1.8.9",
-    "cryptography==49.0.0",
+    "cryptography==50.0.0",
     "pyjwt==2.13.0",
     "jsonschema==4.26.0",
 ]
