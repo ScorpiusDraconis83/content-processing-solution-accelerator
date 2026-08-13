@@ -191,21 +191,27 @@ def get_async_azure_credential():
         logging.info(f"[AUTH] Using {credential_name} for local development")
         return credential
 
-    # Final fallback to DefaultAzureCredential
-    logging.info(
-        "[AUTH] All async CLI credentials failed - falling back to AsyncDefaultAzureCredential"
-    )
+    # All async CLI credentials failed. Select the final credential based on the
+    # environment: production uses Managed Identity, while development uses
+    # DefaultAzureCredential. Defaults to production when APP_ENV is not set.
     app_env = os.getenv("APP_ENV", "prod").lower()
-    if app_env == "dev":
-        print("[AUTH] Environment: DEV -> using AsyncDefaultAzureCredential")
-        logging.info("[AUTH] APP_ENV=dev -> using AsyncDefaultAzureCredential")
-        return AsyncDefaultAzureCredential()  # CodeQL [SM05139] Okay use of DefaultAzureCredential as it is only used in development
-    else:
-        print(f"[AUTH] Environment: PROD (APP_ENV={app_env}) -> using AsyncManagedIdentityCredential")
+    if app_env == "prod":
+        client_id = os.getenv("AZURE_CLIENT_ID")
+        if client_id:
+            logging.info(
+                "[AUTH] APP_ENV=prod -> using async user-assigned managed identity: %s",
+                client_id,
+            )
+            return AsyncManagedIdentityCredential(client_id=client_id)
         logging.info(
-            "[AUTH] APP_ENV=%s -> using AsyncManagedIdentityCredential", app_env
+            "[AUTH] APP_ENV=prod -> using async system-assigned managed identity"
         )
-        return AsyncManagedIdentityCredential(client_id=os.getenv("AZURE_CLIENT_ID"))
+        return AsyncManagedIdentityCredential()
+
+    logging.info(
+        "[AUTH] APP_ENV=%s -> falling back to AsyncDefaultAzureCredential", app_env
+    )
+    return AsyncDefaultAzureCredential()  # CodeQL [SM05139] Okay use of DefaultAzureCredential as it is only used in development
 
 
 def validate_azure_authentication() -> dict[str, Any]:
