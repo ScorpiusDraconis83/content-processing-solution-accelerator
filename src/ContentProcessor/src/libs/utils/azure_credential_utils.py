@@ -191,9 +191,6 @@ def get_async_azure_credential():
         logging.info(f"[AUTH] Using {credential_name} for local development")
         return credential
 
-    # All async CLI credentials failed. Select the final credential based on the
-    # environment: production uses Managed Identity, while development uses
-    # DefaultAzureCredential. Defaults to production when APP_ENV is not set.
     app_env = os.getenv("APP_ENV", "prod").lower()
     if app_env == "prod":
         client_id = os.getenv("AZURE_CLIENT_ID")
