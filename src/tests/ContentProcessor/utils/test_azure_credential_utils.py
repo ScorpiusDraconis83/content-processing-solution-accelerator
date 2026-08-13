@@ -98,7 +98,7 @@ class TestGetAsyncAzureCredential:
         side_effect=Exception("no azd"),
     )
     @patch(f"{MODULE}.AsyncAzureCliCredential", side_effect=Exception("no az"))
-    @patch.dict("os.environ", {}, clear=True)
+    @patch.dict("os.environ", {"APP_ENV": "dev"}, clear=True)
     def test_falls_back_to_async_default(
         self, mock_async_cli, mock_async_dev_cli, mock_async_default
     ):

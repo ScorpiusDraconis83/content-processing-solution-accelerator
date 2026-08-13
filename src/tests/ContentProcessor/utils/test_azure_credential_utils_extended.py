@@ -109,6 +109,7 @@ class TestAzureCredentialUtilsExtended:
         for key in ["WEBSITE_SITE_NAME", "AZURE_CLIENT_ID", "MSI_ENDPOINT",
                     "IDENTITY_ENDPOINT", "KUBERNETES_SERVICE_HOST"]:
             monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("APP_ENV", "dev")
 
         with patch('libs.utils.azure_credential_utils.AsyncAzureCliCredential') as mock_cli, \
              patch('libs.utils.azure_credential_utils.AsyncAzureDeveloperCliCredential') as mock_azd, \
@@ -149,10 +150,7 @@ class TestAzureCredentialUtilsExtended:
         """Test async bearer token provider creation"""
         monkeypatch.setenv("MSI_ENDPOINT", "http://localhost")
 
-        # Create an async mock
-        from unittest.mock import AsyncMock
-
-        with patch('libs.utils.azure_credential_utils.get_async_azure_credential', new_callable=AsyncMock) as mock_get_cred, \
+        with patch('libs.utils.azure_credential_utils.get_async_azure_credential') as mock_get_cred, \
              patch('libs.utils.azure_credential_utils.identity_get_async_bearer_token_provider') as mock_provider:
 
             mock_credential = Mock()
