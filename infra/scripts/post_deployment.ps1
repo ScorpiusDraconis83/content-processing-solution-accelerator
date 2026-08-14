@@ -310,3 +310,23 @@ if ($CU_ACCOUNT_NAME) {
         Write-Host "         az error: $UpdateOutputStr"
     }
 }
+
+# --- Grant the deploying user Container Apps Contributor on the resource group ---
+# Direct (non-group) User assignment so Easy Auth's on-behalf listSecrets validation
+# can resolve RBAC when the Microsoft identity provider is added (avoids group token-overage).
+Write-Host ""
+Write-Host "Granting Container Apps Contributor to the deploying user on the resource group..."
+
+$DeployerObjectId = az ad signed-in-user show --query id -o tsv 2>$null
+if (-not $DeployerObjectId -or -not $RESOURCE_GROUP) {
+    Write-Host "  [Warn] Missing signed-in user id or resource group. Skipping role assignment."
+} else {
+    $RgScope = "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP"
+    $RoleOutput = az role assignment create --assignee-object-id $DeployerObjectId --assignee-principal-type User `
+        --role "358470bc-b998-42bd-ab17-a7e34c199c0f" --scope $RgScope --output none 2>&1
+    if ($LASTEXITCODE -eq 0 -or ($RoleOutput | Out-String) -match '(?i)RoleAssignmentExists|already exists') {
+        Write-Host "  [OK] Container Apps Contributor granted to the deploying user."
+    } else {
+        Write-Host "  [Warn] Could not create the role assignment (non-fatal). az error: $(($RoleOutput | Out-String).Trim())"
+    }
+}

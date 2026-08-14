@@ -337,3 +337,27 @@ if [ -n "$CU_ACCOUNT_NAME" ]; then
     echo "     az error: $CU_UPDATE_ERR"
   fi
 fi
+
+# --- Grant the deploying user Container Apps Contributor on the resource group ---
+# Direct (non-group) User assignment so Easy Auth's on-behalf listSecrets validation
+# can resolve RBAC when the Microsoft identity provider is added (avoids group token-overage).
+echo ""
+echo "Granting Container Apps Contributor to the deploying user on the resource group..."
+
+DEPLOYER_OBJECT_ID=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)
+
+if [ -z "$DEPLOYER_OBJECT_ID" ] || [ -z "$RESOURCE_GROUP" ]; then
+  echo "  ⚠️ Missing signed-in user id or resource group. Skipping role assignment."
+else
+  RG_SCOPE="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP"
+  set +e  # set -e (top of script) would abort on a non-zero az exit
+  ROLE_ERR=$(az role assignment create --assignee-object-id "$DEPLOYER_OBJECT_ID" --assignee-principal-type User \
+    --role "358470bc-b998-42bd-ab17-a7e34c199c0f" --scope "$RG_SCOPE" --output none 2>&1)
+  ROLE_EC=$?
+  set -e
+  if [ $ROLE_EC -eq 0 ] || echo "$ROLE_ERR" | grep -qiE 'RoleAssignmentExists|already exists'; then
+    echo "  ✅ Container Apps Contributor granted to the deploying user."
+  else
+    echo "  ⚠️ Could not create the role assignment (non-fatal). az error: $ROLE_ERR"
+  fi
+fi
