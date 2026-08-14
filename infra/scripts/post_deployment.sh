@@ -345,9 +345,13 @@ echo ""
 echo "Granting Container Apps Contributor to the deploying user on the resource group..."
 
 DEPLOYER_OBJECT_ID=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)
+# azd env may not populate AZURE_SUBSCRIPTION_ID in every shell; fall back to the CLI context.
+if [ -z "$SUBSCRIPTION_ID" ]; then
+  SUBSCRIPTION_ID=$(az account show --query id -o tsv 2>/dev/null || true)
+fi
 
-if [ -z "$DEPLOYER_OBJECT_ID" ] || [ -z "$RESOURCE_GROUP" ]; then
-  echo "  ⚠️ Missing signed-in user id or resource group. Skipping role assignment."
+if [ -z "$DEPLOYER_OBJECT_ID" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$RESOURCE_GROUP" ]; then
+  echo "  ⚠️ Missing signed-in user id, subscription id, or resource group. Skipping role assignment."
 else
   RG_SCOPE="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP"
   set +e  # set -e (top of script) would abort on a non-zero az exit

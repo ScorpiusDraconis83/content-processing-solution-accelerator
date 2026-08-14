@@ -318,8 +318,10 @@ Write-Host ""
 Write-Host "Granting Container Apps Contributor to the deploying user on the resource group..."
 
 $DeployerObjectId = az ad signed-in-user show --query id -o tsv 2>$null
-if (-not $DeployerObjectId -or -not $RESOURCE_GROUP) {
-    Write-Host "  [Warn] Missing signed-in user id or resource group. Skipping role assignment."
+# azd env may not populate AZURE_SUBSCRIPTION_ID in every shell; fall back to the CLI context.
+if (-not $SUBSCRIPTION_ID) { $SUBSCRIPTION_ID = az account show --query id -o tsv 2>$null }
+if (-not $DeployerObjectId -or -not $SUBSCRIPTION_ID -or -not $RESOURCE_GROUP) {
+    Write-Host "  [Warn] Missing signed-in user id, subscription id, or resource group. Skipping role assignment."
 } else {
     $RgScope = "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP"
     $RoleOutput = az role assignment create --assignee-object-id $DeployerObjectId --assignee-principal-type User `
