@@ -47,7 +47,7 @@ async def get_async_bearer_token_provider():
     Returns:
         A callable suitable for SDK clients that accept a token provider.
     """
-    credential = await get_async_azure_credential()
+    credential = get_async_azure_credential()
     return identity_get_async_bearer_token_provider(
         credential, "https://cognitiveservices.azure.com/.default"
     )

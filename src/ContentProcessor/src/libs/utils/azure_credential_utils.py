@@ -47,7 +47,7 @@ async def get_async_bearer_token_provider():
     Returns:
         A callable suitable for SDK clients that accept a token provider.
     """
-    credential = await get_async_azure_credential()
+    credential = get_async_azure_credential()
     return identity_get_async_bearer_token_provider(
         credential, "https://cognitiveservices.azure.com/.default"
     )
@@ -191,11 +191,24 @@ def get_async_azure_credential():
         logging.info(f"[AUTH] Using {credential_name} for local development")
         return credential
 
-    # Final fallback to DefaultAzureCredential
+    app_env = os.getenv("APP_ENV", "prod").lower()
+    if app_env == "prod":
+        client_id = os.getenv("AZURE_CLIENT_ID")
+        if client_id:
+            logging.info(
+                "[AUTH] APP_ENV=prod -> using async user-assigned managed identity: %s",
+                client_id,
+            )
+            return AsyncManagedIdentityCredential(client_id=client_id)
+        logging.info(
+            "[AUTH] APP_ENV=prod -> using async system-assigned managed identity"
+        )
+        return AsyncManagedIdentityCredential()
+
     logging.info(
-        "[AUTH] All async CLI credentials failed - falling back to AsyncDefaultAzureCredential"
+        "[AUTH] APP_ENV=%s -> falling back to AsyncDefaultAzureCredential", app_env
     )
-    return AsyncDefaultAzureCredential()
+    return AsyncDefaultAzureCredential()  # CodeQL [SM05139] Okay use of DefaultAzureCredential as it is only used in development
 
 
 def validate_azure_authentication() -> dict[str, Any]:
