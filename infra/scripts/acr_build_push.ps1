@@ -134,6 +134,26 @@ Write-Host "  Resource Group: $RESOURCE_GROUP"
 Write-Host "  Image Tag: $IMAGE_TAG"
 Write-Host ""
 
+function Build-Image {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ImageName,
+        [Parameter(Mandatory = $true)]
+        [string]$Dockerfile,
+        [Parameter(Mandatory = $true)]
+        [string]$BuildContext
+    )
+
+    az acr build `
+        --registry $ACR_NAME `
+        --image "${ImageName}:$IMAGE_TAG" `
+        --file $Dockerfile `
+        --platform linux `
+        $BuildContext
+
+    if ($LASTEXITCODE -ne 0) { throw "Failed to build $ImageName image" }
+}
+
 try {
     # =============================================================================
     # Step 1: Build and push images to ACR using az acr build
@@ -146,53 +166,37 @@ try {
     # --- ContentProcessor ---
     Write-Host ""
     Write-Host "  Building contentprocessor image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessor:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessor\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessor"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessor image" }
+        Build-Image `
+            -ImageName "contentprocessor" `
+            -Dockerfile "$RepoRoot\src\ContentProcessor\Dockerfile" `
+            -BuildContext "$RepoRoot\src\ContentProcessor"
     Write-Host "  [OK] contentprocessor image built and pushed."
     
     # --- ContentProcessorAPI ---
     Write-Host ""
     Write-Host "  Building contentprocessorapi image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessorapi:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessorAPI\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessorAPI"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessorapi image" }
+        Build-Image `
+            -ImageName "contentprocessorapi" `
+            -Dockerfile "$RepoRoot\src\ContentProcessorAPI\Dockerfile" `
+            -BuildContext "$RepoRoot\src\ContentProcessorAPI"
     Write-Host "  [OK] contentprocessorapi image built and pushed."
     
     # --- ContentProcessorWeb ---
     Write-Host ""
     Write-Host "  Building contentprocessorweb image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessorweb:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessorWeb\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessorWeb"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessorweb image" }
+        Build-Image `
+            -ImageName "contentprocessorweb" `
+            -Dockerfile "$RepoRoot\src\ContentProcessorWeb\Dockerfile" `
+            -BuildContext "$RepoRoot\src\ContentProcessorWeb"
     Write-Host "  [OK] contentprocessorweb image built and pushed."
     
     # --- ContentProcessorWorkflow ---
     Write-Host ""
     Write-Host "  Building contentprocessorworkflow image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessorworkflow:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessorWorkflow\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessorWorkflow"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessorworkflow image" }
+        Build-Image `
+            -ImageName "contentprocessorworkflow" `
+            -Dockerfile "$RepoRoot\src\ContentProcessorWorkflow\Dockerfile" `
+            -BuildContext "$RepoRoot\src\ContentProcessorWorkflow"
     Write-Host "  [OK] contentprocessorworkflow image built and pushed."
     
     Write-Host ""
