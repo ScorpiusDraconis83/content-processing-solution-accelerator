@@ -146,6 +146,19 @@ cleanup() {
 
 trap cleanup EXIT
 
+build_image() {
+    local image_name="$1"
+    local dockerfile="$2"
+    local build_context="$3"
+
+    az acr build \
+        --registry "$ACR_NAME" \
+        --image "$image_name:$IMAGE_TAG" \
+        --file "$dockerfile" \
+        --platform linux \
+        "$build_context"
+}
+
 # =============================================================================
 # Step 1: Build and push images to ACR using az acr build
 # =============================================================================
@@ -156,48 +169,40 @@ echo "============================================================"
 # --- ContentProcessor ---
 echo ""
 echo "  Building contentprocessor image..."
-az acr build \
-  --registry "$ACR_NAME" \
-  --image "contentprocessor:$IMAGE_TAG" \
-  --file "$REPO_ROOT/src/ContentProcessor/Dockerfile" \
-  --platform linux \
-  "$REPO_ROOT/src/ContentProcessor"
+build_image \
+    "contentprocessor" \
+    "$REPO_ROOT/src/ContentProcessor/Dockerfile" \
+    "$REPO_ROOT/src/ContentProcessor"
  
 echo "  ✅ contentprocessor image built and pushed."
  
 # --- ContentProcessorAPI ---
 echo ""
 echo "  Building contentprocessorapi image..."
-az acr build \
-  --registry "$ACR_NAME" \
-  --image "contentprocessorapi:$IMAGE_TAG" \
-  --file "$REPO_ROOT/src/ContentProcessorAPI/Dockerfile" \
-  --platform linux \
-  "$REPO_ROOT/src/ContentProcessorAPI"
+build_image \
+    "contentprocessorapi" \
+    "$REPO_ROOT/src/ContentProcessorAPI/Dockerfile" \
+    "$REPO_ROOT/src/ContentProcessorAPI"
  
 echo "  ✅ contentprocessorapi image built and pushed."
  
 # --- ContentProcessorWeb ---
 echo ""
 echo "  Building contentprocessorweb image..."
-az acr build \
-  --registry "$ACR_NAME" \
-  --image "contentprocessorweb:$IMAGE_TAG" \
-  --file "$REPO_ROOT/src/ContentProcessorWeb/Dockerfile" \
-  --platform linux \
-  "$REPO_ROOT/src/ContentProcessorWeb"
+build_image \
+    "contentprocessorweb" \
+    "$REPO_ROOT/src/ContentProcessorWeb/Dockerfile" \
+    "$REPO_ROOT/src/ContentProcessorWeb"
  
 echo "  ✅ contentprocessorweb image built and pushed."
  
 # --- ContentProcessorWorkflow ---
 echo ""
 echo "  Building contentprocessorworkflow image..."
-az acr build \
-  --registry "$ACR_NAME" \
-  --image "contentprocessorworkflow:$IMAGE_TAG" \
-  --file "$REPO_ROOT/src/ContentProcessorWorkflow/Dockerfile" \
-  --platform linux \
-  "$REPO_ROOT/src/ContentProcessorWorkflow"
+build_image \
+    "contentprocessorworkflow" \
+    "$REPO_ROOT/src/ContentProcessorWorkflow/Dockerfile" \
+    "$REPO_ROOT/src/ContentProcessorWorkflow"
  
 echo "  ✅ contentprocessorworkflow image built and pushed."
  
