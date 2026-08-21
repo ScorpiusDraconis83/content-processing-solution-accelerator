@@ -40,3 +40,5 @@ README.md
 
 
 **/node_modules
+**/.pnpm-store
+**/build
