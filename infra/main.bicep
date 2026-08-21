@@ -44,7 +44,7 @@ param location string
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5.1,300'
+      'OpenAI.GlobalStandard.gpt-5.1,40'
     ]
   }
 })
@@ -70,7 +70,7 @@ param gptModelVersion string = '2025-11-13'
 
 @minValue(1)
 @description('Optional. Capacity of the GPT deployment: (minimum 10).')
-param gptDeploymentCapacity int = 300
+param gptDeploymentCapacity int = 40
 
 @description('Optional. Enable WAF for the deployment.')
 param enablePrivateNetworking bool = false
@@ -559,6 +559,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2025-04-01' = {
       TemplateName: 'Content Processing'
       Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
       CreatedBy: createdBy
+      SecurityControl: 'Ignore'
       DeploymentName: deployment().name
     }
   }
