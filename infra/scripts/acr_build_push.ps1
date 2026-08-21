@@ -125,7 +125,7 @@ $DeploymentType = az group show `
  
 # Get the script directory and navigate to repo root
 $ScriptDir = $PSScriptRoot
-$RepoRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
  
 Write-Host ""
 Write-Host "  ACR Name: $ACR_NAME"
@@ -144,14 +144,40 @@ function Build-Image {
         [string]$BuildContext
     )
 
-    az acr build `
-        --registry $ACR_NAME `
-        --image "${ImageName}:$IMAGE_TAG" `
-        --file $Dockerfile `
-        --platform linux `
-        $BuildContext
+    $ContextPath = [System.IO.Path]::GetRelativePath($RepoRoot, $BuildContext)
+    $DockerfilePath = [System.IO.Path]::GetRelativePath($BuildContext, $Dockerfile)
+    $StagingDirectory = Join-Path ([System.IO.Path]::GetTempPath()) "acr-build-$([guid]::NewGuid())"
+    New-Item -ItemType Directory -Path $StagingDirectory | Out-Null
 
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build $ImageName image" }
+    try {
+        $SourceFiles = git -C $RepoRoot ls-files `
+            --cached `
+            --others `
+            --exclude-standard `
+            -- $ContextPath
+
+        if ($LASTEXITCODE -ne 0) { throw "Failed to collect build context for $ImageName" }
+
+        foreach ($SourceFile in $SourceFiles) {
+            $StagedFile = [System.IO.Path]::GetRelativePath($ContextPath, $SourceFile)
+            $Destination = Join-Path $StagingDirectory $StagedFile
+            $DestinationDirectory = Split-Path -Parent $Destination
+            New-Item -ItemType Directory -Path $DestinationDirectory -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $RepoRoot $SourceFile) -Destination $Destination
+        }
+
+        az acr build `
+            --registry $ACR_NAME `
+            --image "${ImageName}:$IMAGE_TAG" `
+            --file (Join-Path $StagingDirectory $DockerfilePath) `
+            --platform linux `
+            $StagingDirectory
+
+        if ($LASTEXITCODE -ne 0) { throw "Failed to build $ImageName image" }
+    }
+    finally {
+        Remove-Item -LiteralPath $StagingDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 try {
@@ -168,8 +194,8 @@ try {
     Write-Host "  Building contentprocessor image..."
         Build-Image `
             -ImageName "contentprocessor" `
-            -Dockerfile "$RepoRoot\src\ContentProcessor\Dockerfile" `
-            -BuildContext "$RepoRoot\src\ContentProcessor"
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessor/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessor")
     Write-Host "  [OK] contentprocessor image built and pushed."
     
     # --- ContentProcessorAPI ---
@@ -177,8 +203,8 @@ try {
     Write-Host "  Building contentprocessorapi image..."
         Build-Image `
             -ImageName "contentprocessorapi" `
-            -Dockerfile "$RepoRoot\src\ContentProcessorAPI\Dockerfile" `
-            -BuildContext "$RepoRoot\src\ContentProcessorAPI"
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessorAPI/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessorAPI")
     Write-Host "  [OK] contentprocessorapi image built and pushed."
     
     # --- ContentProcessorWeb ---
@@ -186,8 +212,8 @@ try {
     Write-Host "  Building contentprocessorweb image..."
         Build-Image `
             -ImageName "contentprocessorweb" `
-            -Dockerfile "$RepoRoot\src\ContentProcessorWeb\Dockerfile" `
-            -BuildContext "$RepoRoot\src\ContentProcessorWeb"
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessorWeb/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessorWeb")
     Write-Host "  [OK] contentprocessorweb image built and pushed."
     
     # --- ContentProcessorWorkflow ---
@@ -195,8 +221,8 @@ try {
     Write-Host "  Building contentprocessorworkflow image..."
         Build-Image `
             -ImageName "contentprocessorworkflow" `
-            -Dockerfile "$RepoRoot\src\ContentProcessorWorkflow\Dockerfile" `
-            -BuildContext "$RepoRoot\src\ContentProcessorWorkflow"
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessorWorkflow/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessorWorkflow")
     Write-Host "  [OK] contentprocessorworkflow image built and pushed."
     
     Write-Host ""
