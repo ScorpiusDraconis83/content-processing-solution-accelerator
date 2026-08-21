@@ -248,7 +248,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ```bash
 # Install uv package manager if not already installed
-pip install uv
+python -m pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ uv
 
 # Install all dependencies using uv
 uv sync --python 3.12
@@ -362,7 +362,7 @@ source .venv/bin/activate  # Linux/macOS
 
 ```bash
 # Install uv package manager if not already installed
-pip install uv
+python -m pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ uv
 
 # Install all dependencies using uv
 uv sync --python 3.12
@@ -468,7 +468,7 @@ source .venv/bin/activate  # Linux/macOS
 
 ```bash
 # Install uv package manager if not already installed
-pip install uv
+python -m pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ uv
 
 # Install all dependencies using uv
 uv sync --python 3.12 --prerelease=allow
@@ -630,7 +630,7 @@ If you see errors when installing dependencies, ensure you're using `uv sync` in
 
 ```powershell
 # Install uv if not already installed
-pip install uv
+python -m pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ uv
 
 # Use uv sync which handles dependencies better
 uv sync --python 3.12
@@ -645,8 +645,8 @@ If you see "PyO3 modules compiled for CPython 3.8 or older may only be initializ
 ```powershell
 # Uninstall and reinstall with compatible versions
 pip uninstall -y pydantic pydantic-core
-pip install pydantic==2.12.5 pydantic-core==2.41.5
-pip install --upgrade "typing-extensions>=4.14.1"
+python -m pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ pydantic==2.12.5 pydantic-core==2.41.5
+python -m pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ --upgrade "typing-extensions>=4.14.1"
 ```
 
 **Explanation:** Version mismatch between pydantic and pydantic-core causes runtime errors. The compatible versions above work reliably together.

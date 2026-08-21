@@ -180,6 +180,37 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 </details>
 
+### 2.1 Verify Microsoft Package Feed Proxy Access
+
+Dependency restoration uses the Microsoft Package Feed Proxy. Run these checks in each environment you use: local, GitHub Codespaces, VS Code Dev Containers, and VS Code Web.
+
+```shell
+cd src/ContentProcessorWeb
+pnpm config get registry
+pnpm install --frozen-lockfile
+
+cd ../ContentProcessor
+uv sync --frozen
+
+cd ../ContentProcessorAPI
+uv sync --frozen
+
+cd ../ContentProcessorWorkflow
+uv sync --frozen --python 3.12 --prerelease=allow
+```
+
+The pnpm registry must be `https://packagefeedproxy.microsoft.io/npm/`. Python restoration must use `https://packagefeedproxy.microsoft.io/pypi/simple/`. Installation logs must not access `npmjs.org`, `pypi.org`, or `files.pythonhosted.org`.
+
+Record the duration of the pnpm installation for validation:
+
+```powershell
+Measure-Command { pnpm install --frozen-lockfile }
+```
+
+```bash
+time pnpm install --frozen-lockfile
+```
+
 ## Step 3: Configure Deployment Settings
 
 Review the configuration options below. You can customize any settings that meet your needs, or leave them as defaults to proceed with a standard deployment.
@@ -316,6 +347,8 @@ azd up
      ```powershell
      infra\scripts\acr_build_push.ps1
      ```
+
+   In the Azure portal, open the deployed Container Registry and confirm that `contentprocessor`, `contentprocessorapi`, `contentprocessorweb`, and `contentprocessorworkflow` contain the expected image tag. For each Container App, open **Revisions and replicas** and verify that the active revision is **Healthy** and uses the corresponding image from the deployed registry.
 
 2. After the ACR build and push completes, run the post-deployment script:
 

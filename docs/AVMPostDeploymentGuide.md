@@ -31,7 +31,7 @@ Before starting, ensure you have:
 The registration script requires the `requests` library:
 
 ```bash
-pip install requests
+python -m pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ requests
 ```
 
 ## Post-Deployment Steps
