@@ -38,5 +38,11 @@ README.md
 # For more help, visit the .dockerignore file reference guide at
 # https://docs.docker.com/engine/reference/builder/#dockerignore-file
 
-
-**/node_modules
+node_modules
+build
+coverage
+.cache
+.parcel-cache
+.pnpm-store
+.pnpm-cache
+.pnpm
