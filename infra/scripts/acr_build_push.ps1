@@ -141,41 +141,17 @@ function Build-Image {
         [Parameter(Mandatory = $true)]
         [string]$Dockerfile,
         [Parameter(Mandatory = $true)]
-        [string]$BuildContext,
-        [string[]]$ExcludeFromBuildContext = @()
+        [string]$BuildContext
     )
 
-    $effectiveBuildContext = $BuildContext
-    $effectiveDockerfile = $Dockerfile
-    $temporaryBuildContext = $null
+    az acr build `
+        --registry $ACR_NAME `
+        --image "${ImageName}:$IMAGE_TAG" `
+        --file $Dockerfile `
+        --platform linux `
+        $BuildContext
 
-    try {
-        if ($ExcludeFromBuildContext.Count -gt 0) {
-            $temporaryBuildContext = Join-Path ([System.IO.Path]::GetTempPath()) "acr-build-$ImageName-$([guid]::NewGuid())"
-            New-Item -ItemType Directory -Path $temporaryBuildContext | Out-Null
-
-            Get-ChildItem -LiteralPath $BuildContext -Force |
-                Where-Object { $_.Name -notin $ExcludeFromBuildContext } |
-                Copy-Item -Destination $temporaryBuildContext -Recurse -Force
-
-            $effectiveBuildContext = $temporaryBuildContext
-            $effectiveDockerfile = Join-Path $temporaryBuildContext (Split-Path $Dockerfile -Leaf)
-        }
-
-        az acr build `
-            --registry $ACR_NAME `
-            --image "${ImageName}:$IMAGE_TAG" `
-            --file $effectiveDockerfile `
-            --platform linux `
-            $effectiveBuildContext
-
-        if ($LASTEXITCODE -ne 0) { throw "Failed to build $ImageName image" }
-    }
-    finally {
-        if ($temporaryBuildContext -and (Test-Path -LiteralPath $temporaryBuildContext)) {
-            Remove-Item -LiteralPath $temporaryBuildContext -Recurse -Force
-        }
-    }
+    if ($LASTEXITCODE -ne 0) { throw "Failed to build $ImageName image" }
 }
 
 try {
@@ -211,8 +187,7 @@ try {
         Build-Image `
             -ImageName "contentprocessorweb" `
             -Dockerfile "$RepoRoot\src\ContentProcessorWeb\Dockerfile" `
-            -BuildContext "$RepoRoot\src\ContentProcessorWeb" `
-            -ExcludeFromBuildContext @("node_modules", ".pnpm-store", "build")
+            -BuildContext "$RepoRoot\src\ContentProcessorWeb"
     Write-Host "  [OK] contentprocessorweb image built and pushed."
     
     # --- ContentProcessorWorkflow ---
