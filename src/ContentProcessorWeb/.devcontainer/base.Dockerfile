@@ -5,13 +5,13 @@ FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:${VARIANT}
 # Install tslint, typescript. eslint is installed by javascript image
 # ARG NODE_MODULES="tslint-to-eslint-config typescript"
 # COPY library-scripts/meta.env /usr/local/etc/vscode-dev-containers
-# RUN su node -c "umask 0002 && npm install -g ${NODE_MODULES}" \
+# RUN su node -c "umask 0002 && npm install -g --registry=https://packagefeedproxy.microsoft.io/npm/ ${NODE_MODULES}" \
 #     && npm cache clean --force > /dev/null 2>&1
-# RUN su node -c "npm install -g yarn"
-# RUN su node -c "npm install yarn react-app-rewired"
+# RUN su node -c "npm install -g --registry=https://packagefeedproxy.microsoft.io/npm/ yarn"
+# RUN su node -c "npm install --registry=https://packagefeedproxy.microsoft.io/npm/ yarn react-app-rewired"
 
-RUN npm install -g tslint-to-eslint-config typescript
-RUN npm install -g pnpm@10.28.2
+RUN npm install -g --registry=https://packagefeedproxy.microsoft.io/npm/ tslint-to-eslint-config typescript
+RUN npm install -g --registry=https://packagefeedproxy.microsoft.io/npm/ pnpm@10.28.2
 # # Install Python
 # RUN apt-get update && apt-get install -y python3 python3-pip
 

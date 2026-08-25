@@ -125,7 +125,7 @@ $DeploymentType = az group show `
  
 # Get the script directory and navigate to repo root
 $ScriptDir = $PSScriptRoot
-$RepoRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
  
 Write-Host ""
 Write-Host "  ACR Name: $ACR_NAME"
@@ -133,6 +133,52 @@ Write-Host "  ACR Login Server: $ACR_LOGIN_SERVER"
 Write-Host "  Resource Group: $RESOURCE_GROUP"
 Write-Host "  Image Tag: $IMAGE_TAG"
 Write-Host ""
+
+function Build-Image {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ImageName,
+        [Parameter(Mandatory = $true)]
+        [string]$Dockerfile,
+        [Parameter(Mandatory = $true)]
+        [string]$BuildContext
+    )
+
+    $ContextPath = [System.IO.Path]::GetRelativePath($RepoRoot, $BuildContext)
+    $DockerfilePath = [System.IO.Path]::GetRelativePath($BuildContext, $Dockerfile)
+    $StagingDirectory = Join-Path ([System.IO.Path]::GetTempPath()) "acr-build-$([guid]::NewGuid())"
+    New-Item -ItemType Directory -Path $StagingDirectory | Out-Null
+
+    try {
+        $SourceFiles = git -C $RepoRoot ls-files `
+            --cached `
+            --others `
+            --exclude-standard `
+            -- $ContextPath
+
+        if ($LASTEXITCODE -ne 0) { throw "Failed to collect build context for $ImageName" }
+
+        foreach ($SourceFile in $SourceFiles) {
+            $StagedFile = [System.IO.Path]::GetRelativePath($ContextPath, $SourceFile)
+            $Destination = Join-Path $StagingDirectory $StagedFile
+            $DestinationDirectory = Split-Path -Parent $Destination
+            New-Item -ItemType Directory -Path $DestinationDirectory -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $RepoRoot $SourceFile) -Destination $Destination
+        }
+
+        az acr build `
+            --registry $ACR_NAME `
+            --image "${ImageName}:$IMAGE_TAG" `
+            --file (Join-Path $StagingDirectory $DockerfilePath) `
+            --platform linux `
+            $StagingDirectory
+
+        if ($LASTEXITCODE -ne 0) { throw "Failed to build $ImageName image" }
+    }
+    finally {
+        Remove-Item -LiteralPath $StagingDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 
 try {
     # =============================================================================
@@ -146,53 +192,37 @@ try {
     # --- ContentProcessor ---
     Write-Host ""
     Write-Host "  Building contentprocessor image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessor:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessor\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessor"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessor image" }
+        Build-Image `
+            -ImageName "contentprocessor" `
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessor/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessor")
     Write-Host "  [OK] contentprocessor image built and pushed."
     
     # --- ContentProcessorAPI ---
     Write-Host ""
     Write-Host "  Building contentprocessorapi image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessorapi:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessorAPI\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessorAPI"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessorapi image" }
+        Build-Image `
+            -ImageName "contentprocessorapi" `
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessorAPI/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessorAPI")
     Write-Host "  [OK] contentprocessorapi image built and pushed."
     
     # --- ContentProcessorWeb ---
     Write-Host ""
     Write-Host "  Building contentprocessorweb image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessorweb:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessorWeb\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessorWeb"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessorweb image" }
+        Build-Image `
+            -ImageName "contentprocessorweb" `
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessorWeb/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessorWeb")
     Write-Host "  [OK] contentprocessorweb image built and pushed."
     
     # --- ContentProcessorWorkflow ---
     Write-Host ""
     Write-Host "  Building contentprocessorworkflow image..."
-    az acr build `
-      --registry $ACR_NAME `
-      --image "contentprocessorworkflow:$IMAGE_TAG" `
-      --file "$RepoRoot\src\ContentProcessorWorkflow\Dockerfile" `
-      --platform linux `
-      "$RepoRoot\src\ContentProcessorWorkflow"
-    
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build contentprocessorworkflow image" }
+        Build-Image `
+            -ImageName "contentprocessorworkflow" `
+            -Dockerfile (Join-Path $RepoRoot "src/ContentProcessorWorkflow/Dockerfile") `
+            -BuildContext (Join-Path $RepoRoot "src/ContentProcessorWorkflow")
     Write-Host "  [OK] contentprocessorworkflow image built and pushed."
     
     Write-Host ""
