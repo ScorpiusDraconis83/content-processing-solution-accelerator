@@ -54,7 +54,10 @@
         "DISPLAY": "dummy",
         "PYTHONUNBUFFERED": "True",
         "UV_LINK_MODE": "copy",
-        "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
+        "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv",
+        "PIP_INDEX_URL": "https://packagefeedproxy.microsoft.io/pypi/simple/",
+        "UV_INDEX_URL": "https://packagefeedproxy.microsoft.io/pypi/simple/",
+        "NPM_CONFIG_REGISTRY": "https://packagefeedproxy.microsoft.io/npm/"
     },
     "postCreateCommand": "sed -i 's/\r$//' ./.devcontainer/setupEnv.sh && sh ./.devcontainer/setupEnv.sh",
     "remoteEnv": {

@@ -1,171 +1,152 @@
-#!/bin/bash
  
+#!/bin/bash
 # =============================================================================
 # ACR Build and Push Script
 # This script builds container images remotely using Azure Container Registry
 # and updates the Container Apps to use the new images.
 # =============================================================================
- 
 set -e
-
 RESOURCE_GROUP_NAME="$1"
- 
 echo "============================================================"
 echo "ACR Build and Push - Starting..."
 echo "============================================================"
- 
 if [ -z "$RESOURCE_GROUP_NAME" ]; then
-
     echo "Using azd environment values..."
-
     ACR_NAME=$(azd env get-value CONTAINER_REGISTRY_NAME)
     ACR_LOGIN_SERVER=$(azd env get-value CONTAINER_REGISTRY_LOGIN_SERVER)
     RESOURCE_GROUP=$(azd env get-value AZURE_RESOURCE_GROUP)
-
     CONTAINER_APP_NAME=$(azd env get-value CONTAINER_APP_NAME)
     CONTAINER_API_APP_NAME=$(azd env get-value CONTAINER_API_APP_NAME)
     CONTAINER_WEB_APP_NAME=$(azd env get-value CONTAINER_WEB_APP_NAME)
     CONTAINER_WORKFLOW_APP_NAME=$(azd env get-value CONTAINER_WORKFLOW_APP_NAME)
-
 else
-
     echo "Using existing deployment from Resource Group: $RESOURCE_GROUP_NAME"
-
     RESOURCE_GROUP="$RESOURCE_GROUP_NAME"
-
     ACR_NAME=$(az acr list \
         --resource-group "$RESOURCE_GROUP" \
         --query "[0].name" \
         -o tsv)
-
     ACR_LOGIN_SERVER=$(az acr show \
         --name "$ACR_NAME" \
         --resource-group "$RESOURCE_GROUP" \
         --query loginServer \
         -o tsv)
-
     while read APP; do
-
             case "$APP" in
-
         *-app)
             CONTAINER_APP_NAME="$APP"
             ;;
-
         *-api)
             CONTAINER_API_APP_NAME="$APP"
             ;;
-
         *-web)
             CONTAINER_WEB_APP_NAME="$APP"
             ;;
-
         *-wkfl)
             CONTAINER_WORKFLOW_APP_NAME="$APP"
             ;;
-
     esac
-
     done < <(
         az containerapp list \
             --resource-group "$RESOURCE_GROUP" \
             --query "[].name" \
             -o tsv
     )
-
 fi
- 
 IMAGE_TAG="latest"
 DEPLOYMENT_TYPE=$(az group show \
     --name "$RESOURCE_GROUP" \
     --query "tags.Type" \
     -o tsv)
-
 if [ "$DEPLOYMENT_TYPE" = "WAF" ]; then
-
     echo ""
     echo "WAF deployment detected. Temporarily relaxing ACR restrictions..."
-
     az acr update \
         --name "$ACR_NAME" \
         --resource-group "$RESOURCE_GROUP" \
         --allow-exports true
-
     az acr update \
         --name "$ACR_NAME" \
         --resource-group "$RESOURCE_GROUP" \
         --public-network-enabled true
-
     az acr update \
         --name "$ACR_NAME" \
         --resource-group "$RESOURCE_GROUP" \
         --default-action Allow
-
     echo "ACR restrictions temporarily relaxed."
-
 fi
-
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Navigate to repo root (infra/scripts -> root)
 REPO_ROOT="$(realpath "$SCRIPT_DIR/../..")"
- 
 echo ""
 echo "  ACR Name: $ACR_NAME"
 echo "  ACR Login Server: $ACR_LOGIN_SERVER"
 echo "  Resource Group: $RESOURCE_GROUP"
 echo "  Image Tag: $IMAGE_TAG"
 echo ""
- 
 cleanup() {
-
     if [ "$DEPLOYMENT_TYPE" = "WAF" ]; then
-
         echo ""
         echo "Restoring WAF ACR configuration..."
-
         az acr update \
             --name "$ACR_NAME" \
             --resource-group "$RESOURCE_GROUP" \
             --default-action Deny
-
         az acr update \
             --name "$ACR_NAME" \
             --resource-group "$RESOURCE_GROUP" \
             --public-network-enabled false
-
         az acr update \
             --name "$ACR_NAME" \
             --resource-group "$RESOURCE_GROUP" \
             --allow-exports false
-
         echo "ACR configuration restored."
-
     fi
 }
-
 trap cleanup EXIT
-
 build_image() {
     local image_name="$1"
     local dockerfile="$2"
     local build_context="$3"
-
-    az acr build \
+    local context_path
+    local dockerfile_path
+    local staging_dir
+    local source_file
+    local staged_file
+    context_path="${build_context#"$REPO_ROOT"/}"
+    dockerfile_path="${dockerfile#"$build_context"/}"
+    staging_dir="$(mktemp -d)"
+    while IFS= read -r -d '' source_file; do
+        staged_file="${source_file#"$context_path"/}"
+        mkdir -p "$staging_dir/$(dirname "$staged_file")"
+        cp -a "$REPO_ROOT/$source_file" "$staging_dir/$staged_file"
+    done < <(
+        git -C "$REPO_ROOT" ls-files \
+            --cached \
+            --others \
+            --exclude-standard \
+            -z \
+            -- "$context_path"
+    )
+    if az acr build \
         --registry "$ACR_NAME" \
         --image "$image_name:$IMAGE_TAG" \
-        --file "$dockerfile" \
+        --file "$staging_dir/$dockerfile_path" \
         --platform linux \
-        "$build_context"
+        "$staging_dir"; then
+        rm -rf "$staging_dir"
+        return 0
+    fi
+    rm -rf "$staging_dir"
+    return 1
 }
-
 # =============================================================================
 # Step 1: Build and push images to ACR using az acr build
 # =============================================================================
 echo "============================================================"
 echo "Step 1: Building and pushing images to ACR..."
 echo "============================================================"
- 
 # --- ContentProcessor ---
 echo ""
 echo "  Building contentprocessor image..."
@@ -173,9 +154,7 @@ build_image \
     "contentprocessor" \
     "$REPO_ROOT/src/ContentProcessor/Dockerfile" \
     "$REPO_ROOT/src/ContentProcessor"
- 
 echo "  ✅ contentprocessor image built and pushed."
- 
 # --- ContentProcessorAPI ---
 echo ""
 echo "  Building contentprocessorapi image..."
@@ -183,9 +162,7 @@ build_image \
     "contentprocessorapi" \
     "$REPO_ROOT/src/ContentProcessorAPI/Dockerfile" \
     "$REPO_ROOT/src/ContentProcessorAPI"
- 
 echo "  ✅ contentprocessorapi image built and pushed."
- 
 # --- ContentProcessorWeb ---
 echo ""
 echo "  Building contentprocessorweb image..."
@@ -193,9 +170,7 @@ build_image \
     "contentprocessorweb" \
     "$REPO_ROOT/src/ContentProcessorWeb/Dockerfile" \
     "$REPO_ROOT/src/ContentProcessorWeb"
- 
 echo "  ✅ contentprocessorweb image built and pushed."
- 
 # --- ContentProcessorWorkflow ---
 echo ""
 echo "  Building contentprocessorworkflow image..."
@@ -203,12 +178,9 @@ build_image \
     "contentprocessorworkflow" \
     "$REPO_ROOT/src/ContentProcessorWorkflow/Dockerfile" \
     "$REPO_ROOT/src/ContentProcessorWorkflow"
- 
 echo "  ✅ contentprocessorworkflow image built and pushed."
- 
 echo ""
 echo "  All images built and pushed successfully."
- 
 # =============================================================================
 # Step 2: Update Container Apps to use the new images from ACR
 # =============================================================================
@@ -216,7 +188,6 @@ echo ""
 echo "============================================================"
 echo "Step 2: Updating Container Apps with new images..."
 echo "============================================================"
- 
 # --- Update ContentProcessor Container App ---
 echo ""
 echo "  Updating $CONTAINER_APP_NAME..."
@@ -224,9 +195,7 @@ az containerapp update \
   --name "$CONTAINER_APP_NAME" \
   --resource-group "$RESOURCE_GROUP" \
   --image "$ACR_LOGIN_SERVER/contentprocessor:$IMAGE_TAG"
- 
 echo "  ✅ $CONTAINER_APP_NAME updated."
- 
 # --- Update ContentProcessorAPI Container App ---
 echo ""
 echo "  Updating $CONTAINER_API_APP_NAME..."
@@ -234,9 +203,7 @@ az containerapp update \
   --name "$CONTAINER_API_APP_NAME" \
   --resource-group "$RESOURCE_GROUP" \
   --image "$ACR_LOGIN_SERVER/contentprocessorapi:$IMAGE_TAG"
- 
 echo "  ✅ $CONTAINER_API_APP_NAME updated."
- 
 # --- Update ContentProcessorWeb Container App ---
 echo ""
 echo "  Updating $CONTAINER_WEB_APP_NAME..."
@@ -244,9 +211,7 @@ az containerapp update \
   --name "$CONTAINER_WEB_APP_NAME" \
   --resource-group "$RESOURCE_GROUP" \
   --image "$ACR_LOGIN_SERVER/contentprocessorweb:$IMAGE_TAG"
- 
 echo "  ✅ $CONTAINER_WEB_APP_NAME updated."
- 
 # --- Update ContentProcessorWorkflow Container App ---
 echo ""
 echo "  Updating $CONTAINER_WORKFLOW_APP_NAME..."
@@ -254,10 +219,9 @@ az containerapp update \
   --name "$CONTAINER_WORKFLOW_APP_NAME" \
   --resource-group "$RESOURCE_GROUP" \
   --image "$ACR_LOGIN_SERVER/contentprocessorworkflow:$IMAGE_TAG"
- 
 echo "  ✅ $CONTAINER_WORKFLOW_APP_NAME updated."
- 
 echo ""
 echo "============================================================"
 echo "ACR Build and Push - Completed Successfully!"
 echo "============================================================"
+ 

@@ -1,9 +1,3 @@
-# Include any files or directories that you don't want to be copied to your
-# container here (e.g., local build artifacts, temporary files, etc.).
-#
-# For more help, visit the .dockerignore file reference guide at
-# https://docs.docker.com/engine/reference/builder/#dockerignore-file
-
 **/.DS_Store
 **/__pycache__
 **/.venv
@@ -32,12 +26,8 @@
 **/values.dev.yaml
 LICENSE
 README.md
-# Include any files or directories that you don't want to be copied to your
-# container here (e.g., local build artifacts, temporary files, etc.).
-#
-# For more help, visit the .dockerignore file reference guide at
-# https://docs.docker.com/engine/reference/builder/#dockerignore-file
 
+# Azure CLI context packaging requires explicit root-level exclusions.
 node_modules
 build
 coverage
