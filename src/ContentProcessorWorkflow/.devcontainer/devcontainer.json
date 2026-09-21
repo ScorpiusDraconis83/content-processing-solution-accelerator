@@ -1,6 +1,6 @@
 {
     "name": "DevContainer for processor development",
-    "image": "mcr.microsoft.com/devcontainers/python:3.12-bullseye",
+    "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
     "features": {
         "ghcr.io/dhoeric/features/hadolint:1": {},
         "ghcr.io/jsburckhardt/devcontainer-features/uv:1": {},
